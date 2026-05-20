@@ -1,0 +1,239 @@
+{% extends 'playground/base.html' %}
+
+{% block title %}NVIDIA API Configuration - Karpathy Agent{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'dashboard' %}" class="button-outline text-xs px-3 py-1.5 flex items-center gap-2">
+    <i class="fa-solid fa-arrow-left text-[10px]"></i>
+    Back to Playground
+</a>
+{% endblock %}
+
+{% block mobile_header_actions %}
+<a href="{% url 'dashboard' %}" class="text-xs text-mute font-medium">
+    Playground
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="glow-section glow-orange flex-1 flex flex-col justify-center">
+    <div class="max-w-[1200px] mx-auto w-full px-6 py-12 glow-content">
+        
+        <!-- Hero Section -->
+        <div class="mb-12 text-center max-w-lg mx-auto">
+            <h2 class="font-editorial-display display-xl text-ink mb-4">Credentials.</h2>
+            <p class="text-xs text-mute font-mono leading-relaxed">
+                Connect your workspace to the NVIDIA API Catalog. All keys are stored temporarily in your local browser session.
+            </p>
+        </div>
+
+        <div class="max-w-xl mx-auto">
+            <div class="card-resend p-8 bg-surface-card/60 backdrop-blur-md">
+                
+                {% if env_key_present %}
+                <div class="mb-8 p-4 rounded-lg bg-brand-blue/5 border border-brand-blue/10 flex gap-3 text-xs">
+                    <i class="fa-solid fa-circle-info text-brand-blue mt-0.5"></i>
+                    <div>
+                        <span class="font-semibold text-ink">Environment Key Detected</span>
+                        <p class="text-charcoal mt-1">An <code>NVIDIA_API_KEY</code> has been loaded from your local environment variables. Leave this field blank to use it, or override it for this session.</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <form method="POST" id="config-form" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-2">
+                        <label for="api_key" class="block text-xs font-semibold text-charcoal uppercase tracking-wider">NVIDIA API Key</label>
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                id="api_key" 
+                                name="api_key" 
+                                value="{{ api_key }}"
+                                placeholder="nvapi-..." 
+                                class="text-input-resend w-full pr-10 font-mono text-xs"
+                            >
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-mute hover:text-ink">
+                                <i id="eye-icon" class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="base_url" class="block text-xs font-semibold text-charcoal uppercase tracking-wider">Base URL</label>
+                        <input 
+                            type="text" 
+                            id="base_url" 
+                            name="base_url" 
+                            value="{{ base_url }}"
+                            placeholder="https://integrate.api.nvidia.com/v1" 
+                            class="text-input-resend w-full font-mono text-xs"
+                        >
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label for="model" class="block text-xs font-semibold text-charcoal uppercase tracking-wider">Default Model</label>
+                            <select 
+                                id="model" 
+                                name="model" 
+                                onchange="handleModelChange(this)"
+                                class="text-input-resend w-full bg-surface-card"
+                            >
+                                {% for m in models %}
+                                <option value="{{ m.id }}" {% if m.id == selected_model %}selected{% endif %}>{{ m.name }}</option>
+                                {% endfor %}
+                                <option value="custom">-- Custom Model Name --</option>
+                            </select>
+                        </div>
+
+                        <div id="custom-model-wrapper" class="hidden space-y-2">
+                            <label for="custom_model" class="block text-xs font-semibold text-charcoal uppercase tracking-wider">Custom Model Name</label>
+                            <input 
+                                type="text" 
+                                id="custom_model" 
+                                placeholder="e.g. nvidia/llama-3.1-nemotron-51b-instruct" 
+                                class="text-input-resend w-full font-mono text-xs"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Connection Status Message -->
+                    <div id="connection-status" class="hidden p-4 rounded-lg text-xs font-medium border"></div>
+
+                    <div class="pt-4 border-t border-hairline flex flex-col sm:flex-row gap-3">
+                        <button 
+                            type="button" 
+                            id="test-btn" 
+                            onclick="testConnection()"
+                            class="button-ghost flex items-center justify-center gap-2"
+                        >
+                            <i id="test-icon" class="fa-solid fa-plug text-xs"></i>
+                            Test Connection
+                        </button>
+                        
+                        <button 
+                            type="button" 
+                            onclick="saveConfig()"
+                            class="button-primary flex-1 flex items-center justify-center gap-2"
+                        >
+                            <i class="fa-solid fa-circle-check text-xs"></i>
+                            Save Credentials
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById('api_key');
+        const eyeIcon = document.getElementById('eye-icon');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            eyeIcon.className = 'fa-solid fa-eye';
+        } else {
+            passwordInput.type = 'password';
+            eyeIcon.className = 'fa-solid fa-eye-slash';
+        }
+    }
+
+    function handleModelChange(select) {
+        const wrapper = document.getElementById('custom-model-wrapper');
+        const customInput = document.getElementById('custom_model');
+        if (select.value === 'custom') {
+            wrapper.classList.remove('hidden');
+            customInput.required = true;
+        } else {
+            wrapper.classList.add('hidden');
+            customInput.required = false;
+        }
+    }
+
+    function getSelectedModel() {
+        const modelSelect = document.getElementById('model');
+        if (modelSelect.value === 'custom') {
+            return document.getElementById('custom_model').value.trim();
+        }
+        return modelSelect.value;
+    }
+
+    async function testConnection() {
+        const testBtn = document.getElementById('test-btn');
+        const testIcon = document.getElementById('test-icon');
+        const statusDiv = document.getElementById('connection-status');
+        
+        const apiKey = document.getElementById('api_key').value.trim();
+        const baseUrl = document.getElementById('base_url').value.trim();
+        const model = getSelectedModel();
+
+        if (!apiKey && !{{ env_key_present|yesno:"true,false" }}) {
+            statusDiv.className = "p-4 rounded-lg text-xs font-medium bg-brand-red/5 border-brand-red/10 text-brand-red";
+            statusDiv.innerText = "API Key required for testing.";
+            statusDiv.classList.remove('hidden');
+            return;
+        }
+
+        testBtn.disabled = true;
+        testIcon.className = "fa-solid fa-spinner animate-spin";
+        statusDiv.classList.add('hidden');
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'test_connection');
+            formData.append('api_key', apiKey);
+            formData.append('base_url', baseUrl);
+            formData.append('model', model);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            const response = await fetch('{% url "configure" %}', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            statusDiv.classList.remove('hidden');
+            if (data.success) {
+                statusDiv.className = "p-4 rounded-lg text-xs font-medium bg-brand-green/5 border-brand-green/10 text-brand-green";
+                statusDiv.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${data.message}`;
+            } else {
+                statusDiv.className = "p-4 rounded-lg text-xs font-medium bg-brand-red/5 border-brand-red/10 text-brand-red";
+                statusDiv.innerHTML = `<i class="fa-solid fa-circle-xmark mr-2"></i> ${data.message}`;
+            }
+        } catch (err) {
+            statusDiv.className = "p-4 rounded-lg text-xs font-medium bg-brand-red/5 border-brand-red/10 text-brand-red";
+            statusDiv.innerHTML = `<i class="fa-solid fa-circle-xmark mr-2"></i> Request failed: ${err.message}`;
+            statusDiv.classList.remove('hidden');
+        } finally {
+            testBtn.disabled = false;
+            testIcon.className = "fa-solid fa-plug";
+        }
+    }
+
+    function saveConfig() {
+        const form = document.getElementById('config-form');
+        const modelSelect = document.getElementById('model');
+        if (modelSelect.value === 'custom') {
+            const customModelVal = document.getElementById('custom_model').value.trim();
+            if (!customModelVal) {
+                alert('Please enter a custom model name.');
+                return;
+            }
+            const customOption = modelSelect.options[modelSelect.options.length - 1];
+            customOption.value = customModelVal;
+        }
+
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'save_config';
+        form.appendChild(actionInput);
+        
+        form.submit();
+    }
+</script>
+{% endblock %}

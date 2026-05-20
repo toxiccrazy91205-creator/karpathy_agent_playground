@@ -1,0 +1,83 @@
+{% extends 'playground/base.html' %}
+
+{% block title %}History - Karpathy Agent{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'dashboard' %}" class="button-outline text-xs px-3 py-1.5 flex items-center gap-2">
+    <i class="fa-solid fa-square-terminal text-[10px]"></i>
+    Go to Playground
+</a>
+{% endblock %}
+
+{% block mobile_header_actions %}
+<a href="{% url 'dashboard' %}" class="text-xs text-mute font-medium">
+    Playground
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="glow-section glow-blue flex-1 flex flex-col justify-center">
+    <div class="max-w-[1200px] mx-auto w-full px-6 py-12 glow-content">
+        
+        <!-- Hero Section -->
+        <div class="mb-12">
+            <h2 class="font-editorial-display display-xl text-ink mb-4">Run History.</h2>
+            <p class="text-xs text-mute font-mono max-w-xl leading-relaxed">
+                Review past sessions, original source inputs, custom refactoring prompts, and code edits compiled across all model invocations.
+            </p>
+        </div>
+
+        <div class="card-resend p-6 bg-surface-card/60 backdrop-blur-md">
+            {% if sessions %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-hairline-strong text-charcoal text-[10px] uppercase font-mono tracking-wider font-semibold">
+                            <th class="py-3 px-4">Timestamp</th>
+                            <th class="py-3 px-4">Model</th>
+                            <th class="py-3 px-4">Prompt Description</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-hairline text-xs">
+                        {% for session in sessions %}
+                        <tr class="hover:bg-white/[0.01] transition-colors">
+                            <td class="py-4 px-4 font-mono text-mute whitespace-nowrap">
+                                {{ session.created_at|date:"Y-m-d H:i:s" }}
+                            </td>
+                            <td class="py-4 px-4 font-mono text-brand-blue">
+                                {{ session.model_used }}
+                            </td>
+                            <td class="py-4 px-4 max-w-xs truncate text-body">
+                                {{ session.task_description }}
+                            </td>
+                            <td class="py-4 px-4 text-right whitespace-nowrap">
+                                <a href="{% url 'history_detail' session.id %}" class="button-outline text-[10px] py-1.5 px-3">
+                                    <i class="fa-solid fa-eye mr-1 text-[8px]"></i>
+                                    View Session
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-16">
+                <div class="w-12 h-12 rounded-full border border-hairline bg-surface-elevated flex items-center justify-center text-mute text-base mx-auto mb-4">
+                    <i class="fa-solid fa-history"></i>
+                </div>
+                <h4 class="text-ink font-medium text-sm mb-1">No past runs found</h4>
+                <p class="text-xs text-mute max-w-xs mx-auto leading-relaxed">
+                    Once you start executing refactoring jobs in the playground workspace, they will be archived here.
+                </p>
+                <a href="{% url 'dashboard' %}" class="button-primary inline-flex items-center gap-2 mt-6">
+                    Launch Playground
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

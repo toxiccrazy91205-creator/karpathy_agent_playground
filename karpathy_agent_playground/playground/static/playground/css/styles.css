@@ -1,0 +1,337 @@
+/* Resend Editorial Design System Core Stylesheet */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap');
+
+:root {
+    /* Colors */
+    --color-canvas: #000000;
+    --color-surface-card: #0a0a0c;
+    --color-surface-elevated: #101012;
+    --color-surface-deep: #06060a;
+    --color-surface-light: #f1f7fe;
+    
+    --color-primary: #fcfdff;
+    --color-primary-on: #000000;
+    
+    --color-ink: #fcfdff;
+    --color-body: rgba(252, 253, 255, 0.86);
+    --color-charcoal: rgba(252, 253, 255, 0.70);
+    --color-mute: #a1a4a5;
+    --color-ash: #888e90;
+    --color-stone: #464a4d;
+    
+    --color-hairline: rgba(255, 255, 255, 0.06);
+    --color-hairline-strong: rgba(255, 255, 255, 0.14);
+    --color-divider-soft: rgba(255, 255, 255, 0.04);
+    
+    /* Semantic / Accent Colors */
+    --color-accent-orange: #ff801f;
+    --color-accent-orange-glow: rgba(255, 89, 0, 0.15);
+    
+    --color-accent-yellow: #ffc53d;
+    
+    --color-accent-blue: #3b9eff;
+    --color-accent-blue-glow: rgba(0, 117, 255, 0.18);
+    
+    --color-accent-green: #11ff99;
+    --color-accent-green-glow: rgba(34, 255, 153, 0.12);
+    
+    --color-accent-red: #ff2047;
+    --color-accent-red-glow: rgba(255, 32, 71, 0.18);
+}
+
+/* Base resets */
+body {
+    background-color: var(--color-canvas);
+    color: var(--color-body);
+    font-family: 'Geist', 'Inter', -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Hierarchy */
+.font-editorial-display {
+    font-family: 'Newsreader', serif;
+    font-style: normal;
+    font-weight: 400;
+    font-feature-settings: "ss01", "liga", "clig";
+    letter-spacing: -0.03em;
+    line-height: 1.0;
+}
+
+.display-xxl {
+    font-size: clamp(44px, 7vw, 96px);
+}
+
+.display-xl {
+    font-size: clamp(36px, 5.5vw, 76.8px);
+}
+
+.display-lg {
+    font-size: clamp(28px, 4vw, 56px);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+}
+
+.body-lg {
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--color-body);
+}
+
+.body-md {
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    color: var(--color-body);
+}
+
+.body-sm {
+    font-size: 14px;
+    line-height: 1.43;
+    color: var(--color-charcoal);
+}
+
+/* Atmospheric Glow Section Backdrops */
+.glow-section {
+    position: relative;
+    overflow: hidden;
+}
+
+.glow-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 1400px;
+    height: 500px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 1;
+}
+
+.glow-orange::before {
+    background: radial-gradient(circle at 50% 0%, var(--color-accent-orange-glow) 0%, transparent 65%);
+}
+
+.glow-blue::before {
+    background: radial-gradient(circle at 50% 0%, var(--color-accent-blue-glow) 0%, transparent 65%);
+}
+
+.glow-green::before {
+    background: radial-gradient(circle at 50% 0%, var(--color-accent-green-glow) 0%, transparent 65%);
+}
+
+.glow-red::before {
+    background: radial-gradient(circle at 50% 0%, var(--color-accent-red-glow) 0%, transparent 65%);
+}
+
+/* Elements above the glow layer */
+.glow-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* Translucent Borders replace Shadows */
+.card-resend {
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-hairline-strong);
+    border-radius: 12px; /* rounded-lg */
+    box-shadow: none !important;
+}
+
+.card-resend-elevated {
+    background-color: var(--color-surface-elevated);
+    border: 1px solid var(--color-hairline-strong);
+    border-radius: 12px;
+    box-shadow: none !important;
+}
+
+/* Code Window Chrome component */
+.code-window-container {
+    background-color: var(--color-surface-deep);
+    border: 1px solid var(--color-hairline-strong);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.code-window-header {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--color-hairline);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.traffic-lights {
+    display: flex;
+    gap: 6px;
+}
+
+.traffic-light-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.traffic-light-dot.red { background-color: var(--color-accent-red); }
+.traffic-light-dot.yellow { background-color: var(--color-accent-yellow); }
+.traffic-light-dot.green { background-color: var(--color-accent-green); }
+
+/* Buttons styling */
+.button-primary {
+    background-color: var(--color-primary);
+    color: var(--color-primary-on);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px; /* rounded-md */
+    border: 1px solid var(--color-primary);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.button-primary:hover:not(:disabled) {
+    background-color: var(--color-surface-light);
+    border-color: var(--color-surface-light);
+}
+
+.button-primary:active:not(:disabled) {
+    opacity: 0.9;
+}
+
+.button-primary:disabled {
+    background-color: var(--color-stone);
+    border-color: var(--color-stone);
+    color: var(--color-canvas);
+    cursor: not-allowed;
+}
+
+.button-ghost {
+    background-color: var(--color-surface-elevated);
+    color: var(--color-ink);
+    border: 1px solid var(--color-hairline-strong);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.button-ghost:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--color-ink);
+}
+
+.button-outline {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    border: 1px solid var(--color-hairline-strong);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.button-outline:hover {
+    border-color: var(--color-ink);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-hairline-strong);
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-mute);
+}
+
+/* Inputs styling */
+.text-input-resend {
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-hairline-strong);
+    color: var(--color-ink);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.text-input-resend:focus {
+    border-color: var(--color-ink);
+}
+
+/* Active Status indicator */
+.status-dot-green {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background-color: var(--color-accent-green);
+    box-shadow: 0 0 8px var(--color-accent-green);
+}
+
+.status-dot-pulse {
+    animation: status-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes status-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: .4;
+        transform: scale(1.15);
+    }
+}
+
+/* Code Diff layout rendering */
+#diff-table tr {
+    transition: background-color 0.1s ease;
+}
+
+#diff-table td {
+    padding: 3px 8px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.diff-add {
+    background-color: rgba(17, 255, 153, 0.08) !important;
+    border-left: 2px solid var(--color-accent-green);
+    color: var(--color-accent-green) !important;
+}
+
+.diff-remove {
+    background-color: rgba(255, 32, 71, 0.08) !important;
+    border-left: 2px solid var(--color-accent-red);
+    color: var(--color-accent-red) !important;
+}
+
+/* Sidebar & Mobile Navigation bar */
+.nav-border {
+    border-bottom: 1px solid var(--color-hairline);
+}

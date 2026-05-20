@@ -1,0 +1,561 @@
+{% extends 'playground/base.html' %}
+
+{% block title %}Playground - Karpathy Agent{% endblock %}
+
+{% block header_actions %}
+{% if api_key_configured %}
+<div class="flex items-center gap-2">
+    <div class="status-dot-green status-dot-pulse"></div>
+    <span class="text-xs text-mute font-mono tracking-wider">NVIDIA NIM Connected</span>
+</div>
+{% else %}
+<a href="{% url 'configure' %}" class="button-outline text-xs px-3 py-1.5 flex items-center gap-2">
+    <i class="fa-solid fa-triangle-exclamation text-brand-orange animate-pulse"></i>
+    NVIDIA API Config Required
+</a>
+{% endif %}
+{% endblock %}
+
+{% block mobile_header_actions %}
+{% if api_key_configured %}
+<div class="flex items-center gap-2">
+    <div class="status-dot-green status-dot-pulse"></div>
+    <span class="text-xs text-mute font-mono">NVIDIA Connected</span>
+</div>
+{% else %}
+<a href="{% url 'configure' %}" class="text-xs text-brand-red font-medium">
+    Configure NVIDIA API Key
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="glow-section glow-blue flex-1 flex flex-col">
+    <div class="max-w-[1200px] mx-auto w-full px-6 py-12 glow-content flex-1 flex flex-col justify-between">
+        
+        <!-- Hero Section -->
+        <div class="mb-12">
+            <h2 class="font-editorial-display display-xl text-ink mb-4">Coding reimagined.</h2>
+            <p class="text-xs text-mute font-mono max-w-xl leading-relaxed">
+                Run your code edits through Andrej Karpathy's four development guidelines—Think Before Coding, Simplicity First, Surgical Changes, and Goal-Driven Execution—powered by custom-prompted NVIDIA NIM endpoints.
+            </p>
+        </div>
+
+        <!-- 2-Up Workspace Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 items-start">
+            
+            <!-- Left Column: Input Wells -->
+            <div class="lg:col-span-5 space-y-6">
+                <form id="agent-form" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <!-- Original Code Window -->
+                    <div class="code-window-container">
+                        <div class="code-window-header">
+                            <div class="traffic-lights">
+                                <div class="traffic-light-dot red"></div>
+                                <div class="traffic-light-dot yellow"></div>
+                                <div class="traffic-light-dot green"></div>
+                            </div>
+                            <span class="text-[10px] text-mute font-mono">original_file.py</span>
+                        </div>
+                        <textarea 
+                            id="original_code" 
+                            name="original_code" 
+                            placeholder="Paste your original code here..." 
+                            class="w-full bg-surface-deep text-ink font-mono text-xs p-5 focus:outline-none resize-none h-[300px]"
+                        >def validate_user(user_data):
+    # Check email format
+    if not user_data.get('email'):
+        raise ValueError("Email required")
+    
+    # Basic email validation
+    if '@' not in user_data['email']:
+        raise ValueError("Invalid email")
+    
+    # Check username
+    if not user_data.get('username'):
+        raise ValueError("Username required")
+    
+    return True</textarea>
+                    </div>
+
+                    <!-- Task Description -->
+                    <div class="space-y-2">
+                        <label for="task_description" class="block text-xs font-semibold text-charcoal uppercase tracking-wider">Task / Refactoring Prompt</label>
+                        <textarea 
+                            id="task_description" 
+                            name="task_description" 
+                            placeholder="e.g., Fix the bug where empty emails crash the validator. Ensure we trim spaces first." 
+                            class="text-input-resend w-full h-24 resize-none"
+                        >Fix the bug where empty emails crash the validator. Ensure we trim spaces first.</textarea>
+                    </div>
+
+                    <!-- Model Selection & Trigger -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label for="model" class="block text-xs font-semibold text-charcoal uppercase tracking-wider">NIM LLM Model</label>
+                            <select 
+                                id="model" 
+                                name="model" 
+                                class="text-input-resend w-full bg-surface-card"
+                            >
+                                {% for m in models %}
+                                <option value="{{ m.id }}" {% if m.id == selected_model %}selected{% endif %}>{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-end">
+                            <button 
+                                type="submit" 
+                                id="submit-btn"
+                                {% if not api_key_configured %}disabled{% endif %}
+                                class="button-primary w-full h-11 flex items-center justify-center gap-2"
+                            >
+                                <i class="fa-solid fa-play text-xs"></i>
+                                Run Karpathy Agent
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Column: Agent Output Terminal -->
+            <div class="lg:col-span-7 h-full flex flex-col">
+                <div class="card-resend p-6 min-h-[480px] flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xs font-semibold text-ink uppercase tracking-wider mb-6 flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-brand-blue"></i>
+                            Execution Terminal
+                        </h3>
+
+                        <!-- Welcome Screen -->
+                        <div id="output-welcome" class="py-16 text-center">
+                            <div class="w-12 h-12 rounded-full border border-hairline-strong bg-surface-elevated flex items-center justify-center text-mute text-base mx-auto mb-4">
+                                <i class="fa-solid fa-terminal"></i>
+                            </div>
+                            <h4 class="text-ink font-medium text-sm mb-2">Workspace Ready</h4>
+                            <p class="text-xs text-mute max-w-sm mx-auto leading-relaxed">
+                                Enter your code and prompts on the left, then click run to view the agent apply each guideline sequentially.
+                            </p>
+                        </div>
+
+                        <!-- Running / Loading Screen -->
+                        <div id="output-loading" class="hidden py-12 space-y-8">
+                            <div class="flex justify-center">
+                                <div class="w-10 h-10 border-2 border-hairline-strong border-t-ink rounded-full animate-spin"></div>
+                            </div>
+                            
+                            <div class="max-w-xs mx-auto space-y-4 font-mono text-xs">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-brand-blue flex items-center gap-2">
+                                        <i class="fa-solid fa-circle-notch animate-spin" id="spin-step-1"></i>
+                                        <span id="label-step-1">1. Thinking before coding...</span>
+                                    </span>
+                                    <span class="text-mute" id="status-step-1">Running</span>
+                                </div>
+                                <div class="flex items-center justify-between text-stone">
+                                    <span class="flex items-center gap-2">
+                                        <i class="fa-regular fa-circle" id="spin-step-2"></i>
+                                        <span id="label-step-2">2. Checking code simplicity...</span>
+                                    </span>
+                                    <span id="status-step-2">Pending</span>
+                                </div>
+                                <div class="flex items-center justify-between text-stone">
+                                    <span class="flex items-center gap-2">
+                                        <i class="fa-regular fa-circle" id="spin-step-3"></i>
+                                        <span id="label-step-3">3. Performing surgical edits...</span>
+                                    </span>
+                                    <span id="status-step-3">Pending</span>
+                                </div>
+                                <div class="flex items-center justify-between text-stone">
+                                    <span class="flex items-center gap-2">
+                                        <i class="fa-regular fa-circle" id="spin-step-4"></i>
+                                        <span id="label-step-4">4. Verifying success goals...</span>
+                                    </span>
+                                    <span id="status-step-4">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Error State -->
+                        <div id="output-error" class="hidden py-16 text-center">
+                            <div class="w-12 h-12 rounded-full border border-brand-red/20 bg-brand-red/5 flex items-center justify-center text-brand-red text-base mx-auto mb-4">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <h4 class="text-brand-red font-medium text-sm mb-2">Inference Error</h4>
+                            <p id="error-message" class="text-xs text-mute max-w-sm mx-auto leading-relaxed"></p>
+                        </div>
+
+                        <!-- Output Results Accordions -->
+                        <div id="output-results" class="hidden space-y-4">
+                            
+                            <!-- Step 1: Thinking -->
+                            <div class="border border-hairline-strong bg-surface-card rounded-xl overflow-hidden">
+                                <button class="w-full px-5 py-3.5 flex items-center justify-between bg-white/[0.02] border-b border-hairline text-left font-semibold text-[10px] text-ink uppercase tracking-wider hover:bg-white/[0.05] transition-all" onclick="toggleCard('think-card')">
+                                    <span class="flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded-md border border-hairline bg-surface-elevated flex items-center justify-center text-[10px] text-mute font-mono">01</span>
+                                        Think Before Coding
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down text-mute text-[10px] transition-transform duration-300" id="think-card-icon"></i>
+                                </button>
+                                <div id="think-card" class="p-6 space-y-4 text-xs">
+                                    <div>
+                                        <h5 class="text-[10px] font-semibold text-mute uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="fa-solid fa-circle-info text-brand-blue"></i> Explicit Assumptions</h5>
+                                        <ul id="list-assumptions" class="list-disc list-inside space-y-1 text-body pl-2 leading-relaxed"></ul>
+                                    </div>
+                                    <div>
+                                        <h5 class="text-[10px] font-semibold text-mute uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="fa-solid fa-scale-balanced text-brand-blue"></i> Evaluated Tradeoffs</h5>
+                                        <ul id="list-tradeoffs" class="list-disc list-inside space-y-1 text-body pl-2 leading-relaxed"></ul>
+                                    </div>
+                                    <div id="wrapper-clarifications">
+                                        <h5 class="text-[10px] font-semibold text-mute uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="fa-solid fa-circle-question text-brand-blue"></i> Clarifications We Would Ask</h5>
+                                        <ul id="list-clarifications" class="list-disc list-inside space-y-1 text-body pl-2 leading-relaxed"></ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Simplicity First -->
+                            <div class="border border-hairline-strong bg-surface-card rounded-xl overflow-hidden">
+                                <button class="w-full px-5 py-3.5 flex items-center justify-between bg-white/[0.02] border-b border-hairline text-left font-semibold text-[10px] text-ink uppercase tracking-wider hover:bg-white/[0.05] transition-all" onclick="toggleCard('simplicity-card')">
+                                    <span class="flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded-md border border-hairline bg-surface-elevated flex items-center justify-center text-[10px] text-mute font-mono">02</span>
+                                        Simplicity First
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down text-mute text-[10px] transition-transform duration-300" id="simplicity-card-icon"></i>
+                                </button>
+                                <div id="simplicity-card" class="p-6 space-y-4 text-xs">
+                                    <div id="wrapper-warnings" class="hidden">
+                                        <div class="p-4 rounded-lg bg-brand-orange/5 border border-brand-orange/20 flex items-start gap-3">
+                                            <i class="fa-solid fa-triangle-exclamation text-brand-orange mt-0.5"></i>
+                                            <div>
+                                                <h6 class="text-[10px] font-semibold text-brand-orange uppercase tracking-wider mb-1">Code Bloat Warnings</h6>
+                                                <ul id="list-warnings" class="list-disc list-inside space-y-1 text-body pl-2 leading-relaxed"></ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h5 class="text-[10px] font-semibold text-mute uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb text-brand-orange"></i> Simplification Strategy</h5>
+                                        <p id="p-simplicity-reasoning" class="text-body pl-2 leading-relaxed"></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Surgical Changes (Git-style Diff) -->
+                            <div class="border border-hairline-strong bg-surface-card rounded-xl overflow-hidden">
+                                <button class="w-full px-5 py-3.5 flex items-center justify-between bg-white/[0.02] border-b border-hairline text-left font-semibold text-[10px] text-ink uppercase tracking-wider hover:bg-white/[0.05] transition-all" onclick="toggleCard('diff-card')">
+                                    <span class="flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded-md border border-hairline bg-surface-elevated flex items-center justify-center text-[10px] text-mute font-mono">03</span>
+                                        Surgical Changes (Git-style Diff)
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down text-mute text-[10px] transition-transform duration-300" id="diff-card-icon"></i>
+                                </button>
+                                <div id="diff-card" class="p-4">
+                                    <div class="code-window-container">
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full border-collapse" id="diff-table">
+                                                <thead>
+                                                    <tr class="bg-white/[0.02] border-b border-hairline text-mute text-[10px] uppercase font-semibold font-mono">
+                                                        <th class="py-2 px-3 text-right w-12 border-r border-hairline select-none">Old</th>
+                                                        <th class="py-2 px-3 text-right w-12 border-r border-hairline select-none">New</th>
+                                                        <th class="py-2 px-4 text-left">Code Changes</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="diff-body">
+                                                    <!-- Diff lines -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Goal-Driven Execution -->
+                            <div class="border border-hairline-strong bg-surface-card rounded-xl overflow-hidden">
+                                <button class="w-full px-5 py-3.5 flex items-center justify-between bg-white/[0.02] border-b border-hairline text-left font-semibold text-[10px] text-ink uppercase tracking-wider hover:bg-white/[0.05] transition-all" onclick="toggleCard('goals-card')">
+                                    <span class="flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded-md border border-hairline bg-surface-elevated flex items-center justify-center text-[10px] text-mute font-mono">04</span>
+                                        Goal-Driven Execution (Verifiable Goals)
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down text-mute text-[10px] transition-transform duration-300" id="goals-card-icon"></i>
+                                </button>
+                                <div id="goals-card" class="p-6">
+                                    <div class="space-y-4" id="goals-container">
+                                        <!-- Goals -->
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle card expansion
+    function toggleCard(cardId) {
+        const card = document.getElementById(cardId);
+        const icon = document.getElementById(cardId + '-icon');
+        
+        card.classList.toggle('hidden');
+        if (card.classList.contains('hidden')) {
+            icon.style.transform = 'rotate(0deg)';
+        } else {
+            icon.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    // Line-by-line diff generator using custom styles.css classes
+    function renderDiff(oldText, newText) {
+        const oldLines = oldText.split('\n');
+        const newLines = newText.split('\n');
+        
+        const tbody = document.getElementById('diff-body');
+        tbody.innerHTML = '';
+        
+        let i = 0, j = 0;
+        while (i < oldLines.length || j < newLines.length) {
+            let row = document.createElement('tr');
+            row.className = 'border-b border-white/[0.02]';
+            
+            if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
+                // Unchanged line
+                row.innerHTML = `
+                    <td class="py-1 px-3 text-right text-stone border-r border-hairline select-none">${i+1}</td>
+                    <td class="py-1 px-3 text-right text-stone border-r border-hairline select-none">${j+1}</td>
+                    <td class="py-1 px-4 text-mute bg-transparent whitespace-pre font-mono">${escapeHtml(oldLines[i])}</td>
+                `;
+                i++;
+                j++;
+            } else if (j < newLines.length && (i >= oldLines.length || !oldLines.slice(i).includes(newLines[j]))) {
+                // Line added
+                row.innerHTML = `
+                    <td class="py-1 px-3 text-right text-stone border-r border-hairline select-none"></td>
+                    <td class="py-1 px-3 text-right text-brand-green border-r border-hairline select-none bg-brand-green/5">${j+1}</td>
+                    <td class="py-1 px-4 diff-add whitespace-pre font-mono"><span class="text-brand-green select-none mr-2">+</span>${escapeHtml(newLines[j])}</td>
+                `;
+                j++;
+            } else {
+                // Line removed
+                row.innerHTML = `
+                    <td class="py-1 px-3 text-right text-brand-red border-r border-hairline select-none bg-brand-red/5">${i+1}</td>
+                    <td class="py-1 px-3 text-right text-stone border-r border-hairline select-none"></td>
+                    <td class="py-1 px-4 diff-remove whitespace-pre font-mono"><span class="text-brand-red select-none mr-2">-</span>${escapeHtml(oldLines[i])}</td>
+                `;
+                i++;
+            }
+            tbody.appendChild(row);
+        }
+    }
+
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Ajax Form Submit
+    const form = document.getElementById('agent-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const welcomeArea = document.getElementById('output-welcome');
+    const loadingArea = document.getElementById('output-loading');
+    const errorArea = document.getElementById('output-error');
+    const resultsArea = document.getElementById('output-results');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const originalCode = document.getElementById('original_code').value;
+        const taskDesc = document.getElementById('task_description').value;
+        const model = document.getElementById('model').value;
+        
+        if (!originalCode || !taskDesc) return;
+        
+        welcomeArea.classList.add('hidden');
+        errorArea.classList.add('hidden');
+        resultsArea.classList.add('hidden');
+        loadingArea.classList.remove('hidden');
+        submitBtn.disabled = true;
+        
+        resetLoadingSteps();
+        
+        try {
+            setStepState(1, 'active', '1. Thinking before coding...');
+            
+            const response = await fetch('{% url "execute_agent" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    original_code: originalCode,
+                    task_description: taskDesc,
+                    model: model
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'API request failed.');
+            }
+            
+            setStepState(1, 'success', '1. Think Before Coding: Complete');
+            
+            setStepState(2, 'active', '2. Evaluating code simplicity...');
+            await sleep(600);
+            setStepState(2, 'success', '2. Simplicity First: Complete');
+            
+            setStepState(3, 'active', '3. Performing surgical edits...');
+            await sleep(600);
+            setStepState(3, 'success', '3. Surgical Changes: Complete');
+            
+            setStepState(4, 'active', '4. Validating success criteria...');
+            await sleep(600);
+            setStepState(4, 'success', '4. Goal-Driven Execution: Complete');
+            
+            renderResults(data, originalCode);
+            
+            loadingArea.classList.add('hidden');
+            resultsArea.classList.remove('hidden');
+            
+        } catch (err) {
+            loadingArea.classList.add('hidden');
+            errorArea.classList.remove('hidden');
+            document.getElementById('error-message').innerText = err.message;
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function resetLoadingSteps() {
+        for (let i = 1; i <= 4; i++) {
+            const spin = document.getElementById(`spin-step-${i}`);
+            const label = document.getElementById(`label-step-${i}`);
+            const status = document.getElementById(`status-step-${i}`);
+            
+            spin.className = 'fa-regular fa-circle';
+            label.className = 'text-stone';
+            status.className = 'text-stone';
+            status.innerText = 'Pending';
+        }
+    }
+
+    function setStepState(stepNum, state, labelText) {
+        const spin = document.getElementById(`spin-step-${stepNum}`);
+        const label = document.getElementById(`label-step-${stepNum}`);
+        const status = document.getElementById(`status-step-${stepNum}`);
+        
+        if (labelText) label.innerText = labelText;
+        
+        if (state === 'active') {
+            spin.className = 'fa-solid fa-circle-notch animate-spin text-brand-blue';
+            label.className = 'text-brand-blue font-medium';
+            status.className = 'text-brand-blue font-semibold';
+            status.innerText = 'Running';
+        } else if (state === 'success') {
+            spin.className = 'fa-solid fa-circle-check text-brand-green';
+            label.className = 'text-body';
+            status.className = 'text-brand-green font-semibold';
+            status.innerText = 'Done';
+        }
+    }
+
+    function renderResults(data, originalCode) {
+        // Step 1: Think Before Coding
+        const assumptionsList = document.getElementById('list-assumptions');
+        assumptionsList.innerHTML = '';
+        (data.assumptions.assumptions || []).forEach(item => {
+            const li = document.createElement('li');
+            li.innerText = item;
+            assumptionsList.appendChild(li);
+        });
+        if ((data.assumptions.assumptions || []).length === 0) {
+            assumptionsList.innerHTML = '<li>None stated.</li>';
+        }
+        
+        const tradeoffsList = document.getElementById('list-tradeoffs');
+        tradeoffsList.innerHTML = '';
+        (data.assumptions.tradeoffs || []).forEach(item => {
+            const li = document.createElement('li');
+            li.innerText = item;
+            tradeoffsList.appendChild(li);
+        });
+        if ((data.assumptions.tradeoffs || []).length === 0) {
+            tradeoffsList.innerHTML = '<li>None listed.</li>';
+        }
+
+        const clarificationsList = document.getElementById('list-clarifications');
+        clarificationsList.innerHTML = '';
+        const clarifications = data.assumptions.clarifications_needed || [];
+        clarifications.forEach(item => {
+            const li = document.createElement('li');
+            li.innerText = item;
+            clarificationsList.appendChild(li);
+        });
+        const wrapperClarifications = document.getElementById('wrapper-clarifications');
+        if (clarifications.length === 0) {
+            wrapperClarifications.classList.add('hidden');
+        } else {
+            wrapperClarifications.classList.remove('hidden');
+        }
+ 
+        // Step 2: Simplicity First
+        const warningsWrapper = document.getElementById('wrapper-warnings');
+        const warningsList = document.getElementById('list-warnings');
+        warningsList.innerHTML = '';
+        const warnings = data.simplicity_check.bloat_warnings || [];
+        warnings.forEach(item => {
+            const li = document.createElement('li');
+            li.innerText = item;
+            warningsList.appendChild(li);
+        });
+        if (warnings.length > 0) {
+            warningsWrapper.classList.remove('hidden');
+        } else {
+            warningsWrapper.classList.add('hidden');
+        }
+        
+        document.getElementById('p-simplicity-reasoning').innerText = data.simplicity_check.simplification_reasoning || 'No strategy provided.';
+
+        // Step 3: Surgical Changes
+        renderDiff(originalCode, data.modified_code);
+
+        // Step 4: Goal-Driven Execution
+        const goalsContainer = document.getElementById('goals-container');
+        goalsContainer.innerHTML = '';
+        (data.verifiable_goals || []).forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'card-resend-elevated p-4 flex gap-3.5';
+            div.innerHTML = `
+                <div class="w-5 h-5 rounded-full border border-brand-green/20 bg-brand-green/5 flex items-center justify-center text-brand-green mt-0.5 shrink-0 select-none">
+                    <i class="fa-solid fa-check text-[9px]"></i>
+                </div>
+                <div>
+                    <h6 class="text-[10px] font-semibold text-ink uppercase tracking-wider mb-1">${escapeHtml(item.goal)}</h6>
+                    <p class="text-xs text-charcoal leading-normal">${escapeHtml(item.verification_method)}</p>
+                </div>
+            `;
+            goalsContainer.appendChild(div);
+        });
+        if ((data.verifiable_goals || []).length === 0) {
+            goalsContainer.innerHTML = `
+                <div class="text-xs text-mute text-center py-4">No specific validation goals provided.</div>
+            `;
+        }
+    }
+</script>
+{% endblock %}

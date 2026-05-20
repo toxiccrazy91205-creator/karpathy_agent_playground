@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Karpathy Agent Playground{% endblock %}</title>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS (utility first structure) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom styling -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'playground/css/styles.css' %}">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', 'Inter', 'sans-serif'],
+                        serif: ['Newsreader', 'serif'],
+                        mono: ['Geist Mono', 'monospace'],
+                    },
+                    colors: {
+                        canvas: '#000000',
+                        'surface-card': '#0a0a0c',
+                        'surface-elevated': '#101012',
+                        'surface-deep': '#06060a',
+                        'surface-light': '#f1f7fe',
+                        ink: '#fcfdff',
+                        body: 'rgba(252, 253, 255, 0.86)',
+                        charcoal: 'rgba(252, 253, 255, 0.70)',
+                        mute: '#a1a4a5',
+                        ash: '#888e90',
+                        stone: '#464a4d',
+                        hairline: 'rgba(255, 255, 255, 0.06)',
+                        'hairline-strong': 'rgba(255, 255, 255, 0.14)',
+                        'divider-soft': 'rgba(255, 255, 255, 0.04)',
+                        brand: {
+                            orange: '#ff801f',
+                            yellow: '#ffc53d',
+                            blue: '#3b9eff',
+                            green: '#11ff99',
+                            red: '#ff2047',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-black text-body font-sans min-h-full flex flex-col antialiased">
+    
+    <!-- Top Navigation Bar -->
+    <nav class="h-16 nav-border bg-black/80 backdrop-blur-md sticky top-0 z-50 flex items-center">
+        <div class="max-w-[1200px] mx-auto w-full px-6 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="{% url 'dashboard' %}" class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg border border-hairline-strong bg-surface-card flex items-center justify-center">
+                    <i class="fa-solid fa-brain text-ink text-xs"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-semibold text-xs tracking-tight text-ink uppercase leading-none">Karpathy Agent</span>
+                    <span class="text-[8px] text-mute uppercase font-mono tracking-wider">Playground</span>
+                </div>
+            </a>
+
+            <!-- Central Nav Links (Desktop) -->
+            <div class="hidden lg:flex items-center gap-8">
+                <a href="{% url 'dashboard' %}" class="text-xs font-medium tracking-wide transition-all {% if request.resolver_match.url_name == 'dashboard' %}text-ink{% else %}text-mute hover:text-ink{% endif %}">
+                    Playground
+                </a>
+                <a href="{% url 'configure' %}" class="text-xs font-medium tracking-wide transition-all {% if request.resolver_match.url_name == 'configure' %}text-ink{% else %}text-mute hover:text-ink{% endif %}">
+                    NVIDIA Configuration
+                </a>
+                <a href="{% url 'history_list' %}" class="text-xs font-medium tracking-wide transition-all {% if request.resolver_match.url_name == 'history_list' or request.resolver_match.url_name == 'history_detail' %}text-ink{% else %}text-mute hover:text-ink{% endif %}">
+                    Run History
+                </a>
+            </div>
+
+            <!-- Right Actions (Desktop) -->
+            <div class="hidden lg:flex items-center gap-4">
+                {% block header_actions %}{% endblock %}
+            </div>
+
+            <!-- Mobile Hamburger Button -->
+            <button class="lg:hidden text-mute hover:text-ink p-1" id="menu-toggle" aria-label="Toggle menu">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Drawer menu -->
+    <div id="mobile-menu" class="hidden lg:hidden bg-black border-b border-hairline px-6 py-4 space-y-4">
+        <a href="{% url 'dashboard' %}" class="block text-xs font-medium tracking-wide {% if request.resolver_match.url_name == 'dashboard' %}text-ink{% else %}text-mute{% endif %}">
+            Playground
+        </a>
+        <a href="{% url 'configure' %}" class="block text-xs font-medium tracking-wide {% if request.resolver_match.url_name == 'configure' %}text-ink{% else %}text-mute{% endif %}">
+            NVIDIA Configuration
+        </a>
+        <a href="{% url 'history_list' %}" class="block text-xs font-medium tracking-wide {% if request.resolver_match.url_name == 'history_list' or request.resolver_match.url_name == 'history_detail' %}text-ink{% else %}text-mute{% endif %}">
+            Run History
+        </a>
+        <div class="pt-2 border-t border-hairline flex items-center justify-between">
+            {% block mobile_header_actions %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black py-16 border-t border-hairline mt-auto">
+        <div class="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="md:col-span-2">
+                <div class="flex items-center gap-2.5 mb-4">
+                    <div class="w-6 h-6 rounded-md border border-hairline-strong bg-surface-card flex items-center justify-center">
+                        <i class="fa-solid fa-brain text-ink text-[10px]"></i>
+                    </div>
+                    <span class="font-semibold text-xs text-ink uppercase tracking-tight">Karpathy Agent</span>
+                </div>
+                <p class="text-xs text-ash max-w-sm leading-relaxed">
+                    An interactive playground enforcing the 4 core LLM coding principles of Think Before Coding, Simplicity First, Surgical Changes, and Goal-Driven Execution. Powered by NVIDIA NIM API.
+                </p>
+            </div>
+            <div>
+                <h5 class="text-xs font-semibold text-ink uppercase tracking-wider mb-4">Navigation</h5>
+                <ul class="space-y-2 text-xs text-ash font-mono">
+                    <li><a href="{% url 'dashboard' %}" class="hover:text-ink">Playground</a></li>
+                    <li><a href="{% url 'configure' %}" class="hover:text-ink">NVIDIA Config</a></li>
+                    <li><a href="{% url 'history_list' %}" class="hover:text-ink">Run History</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 class="text-xs font-semibold text-ink uppercase tracking-wider mb-4">System</h5>
+                <div class="flex items-center gap-2 text-xs text-ash">
+                    <div class="status-dot-green status-dot-pulse"></div>
+                    <span>NVIDIA NIM Status: Operational</span>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-[1200px] mx-auto px-6 mt-12 pt-6 border-t border-divider-soft flex flex-col md:flex-row items-center justify-between gap-4">
+            <span class="text-[10px] text-ash font-mono">&copy; 2026 Karpathy Agent Playground. All rights reserved.</span>
+            <a href="https://github.com/multica-ai/andrej-karpathy-skills" target="_blank" class="text-[10px] text-ash hover:text-ink flex items-center gap-1.5 font-mono">
+                <i class="fa-brands fa-github text-xs"></i>
+                GitHub Repository
+            </a>
+        </div>
+    </footer>
+
+    <!-- Mobile Navigation script -->
+    <script>
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (menuToggle && mobileMenu) {
+            menuToggle.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+    </script>
+</body>
+</html>

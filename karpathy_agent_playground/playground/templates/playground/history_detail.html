@@ -1,0 +1,278 @@
+{% extends 'playground/base.html' %}
+
+{% block title %}Session {{ session.id }} Details - Karpathy Agent{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'history_list' %}" class="button-outline text-xs px-3 py-1.5 flex items-center gap-2">
+    <i class="fa-solid fa-arrow-left text-[10px]"></i>
+    Back to History
+</a>
+{% endblock %}
+
+{% block mobile_header_actions %}
+<a href="{% url 'history_list' %}" class="text-xs text-mute font-medium">
+    History Index
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="glow-section glow-blue flex-1 flex flex-col">
+    <div class="max-w-[1200px] mx-auto w-full px-6 py-12 glow-content flex-1 flex flex-col justify-between">
+        
+        <!-- Hero Section -->
+        <div class="mb-12">
+            <h2 class="font-editorial-display display-xl text-ink mb-4">Run Details.</h2>
+            <p class="text-xs text-mute font-mono max-w-xl leading-relaxed">
+                Detailed audit trail and code execution logs for Session ID #{{ session.id }}.
+            </p>
+        </div>
+
+        <!-- 2-Up Split Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start flex-1">
+            
+            <!-- Left Column: Session Meta & Source Code -->
+            <div class="lg:col-span-5 space-y-6">
+                <!-- Meta Info Card -->
+                <div class="card-resend p-6 space-y-5 bg-surface-card/60 backdrop-blur-md">
+                    <h3 class="text-xs font-semibold text-ink uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-info text-brand-blue"></i>
+                        Session Metadata
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                        <div>
+                            <span class="text-[10px] font-semibold uppercase text-mute tracking-wider">Timestamp</span>
+                            <div class="text-ink font-mono mt-1">{{ session.created_at|date:"Y-m-d H:i:s" }}</div>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-semibold uppercase text-mute tracking-wider">Model Used</span>
+                            <div class="text-ink font-mono mt-1 truncate select-all" title="{{ session.model_used }}">{{ session.model_used }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-hairline space-y-2">
+                        <span class="text-[10px] font-semibold uppercase text-mute tracking-wider">Prompt Context</span>
+                        <div class="p-4 rounded-lg bg-surface-deep border border-hairline text-xs text-body leading-relaxed font-mono">
+                            {{ session.task_description }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Original Code Window -->
+                <div class="code-window-container">
+                    <div class="code-window-header">
+                        <div class="traffic-lights">
+                            <div class="traffic-light-dot red"></div>
+                            <div class="traffic-light-dot yellow"></div>
+                            <div class="traffic-light-dot green"></div>
+                        </div>
+                        <span class="text-[10px] text-mute font-mono">original_file.py</span>
+                    </div>
+                    <pre class="bg-surface-deep text-mute font-mono text-xs p-5 overflow-auto max-h-[300px] select-all">{{ session.original_code }}</pre>
+                </div>
+            </div>
+
+            <!-- Right Column: Step Breakdown -->
+            <div class="lg:col-span-7 space-y-4">
+                
+                <!-- Step 1: Thinking -->
+                <div class="border border-hairline-strong bg-surface-card rounded-xl overflow-hidden">
+                    <button class="w-full px-5 py-3.5 flex items-center justify-between bg-white/[0.02] border-b border-hairline text-left font-semibold text-[10px] text-ink uppercase tracking-wider hover:bg-white/[0.05] transition-all" onclick="toggleCard('think-card')">
+                        <span class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-md border border-hairline bg-surface-elevated flex items-center justify-center text-[10px] text-mute font-mono">01</span>
+                            Think Before Coding
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-mute text-[10px] transition-transform duration-300" id="think-card-icon" style="transform: rotate(180deg);"></i>
+                    </button>
+                    <div id="think-card" class="p-6 space-y-4 text-xs">
+                        <div>
+                            <h5 class="text-[10px] font-semibold text-mute uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="fa-solid fa-circle-info text-brand-blue"></i> Explicit Assumptions</h5>
+                            <ul class="list-disc list-inside space-y-1 text-body pl-2 leading-relaxed">
+                                {% for item in session.assumptions.assumptions %}
+                                <li>{{ item }}</li>
+                                {% empty %}
+                                <li>None stated.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 class="text-[10px] font-semibold text-mute uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="fa-solid fa-scale-balanced text-brand-blue"></i> Evaluated Tradeoffs</h5>
+                            <ul class="list-disc list-inside space-y-1 text-body pl-2 leading-relaxed">
+                                {% for item in session.assumptions.tradeoffs %}
+                                <li>{{ item }}</li>
+                                {% empty %}
+                                <li>None listed.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% if session.assumptions.clarifications_needed %}
+                        <div>
+                            <h5 class="text-[10px] font-semibold text-mute uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="fa-solid fa-circle-question text-brand-blue"></i> Clarifications We Would Ask</h5>
+                            <ul class="list-disc list-inside space-y-1 text-body pl-2 leading-relaxed">
+                                {% for item in session.assumptions.clarifications_needed %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Step 2: Simplicity First -->
+                <div class="border border-hairline-strong bg-surface-card rounded-xl overflow-hidden">
+                    <button class="w-full px-5 py-3.5 flex items-center justify-between bg-white/[0.02] border-b border-hairline text-left font-semibold text-[10px] text-ink uppercase tracking-wider hover:bg-white/[0.05] transition-all" onclick="toggleCard('simplicity-card')">
+                        <span class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-md border border-hairline bg-surface-elevated flex items-center justify-center text-[10px] text-mute font-mono">02</span>
+                            Simplicity First
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-mute text-[10px] transition-transform duration-300" id="simplicity-card-icon" style="transform: rotate(180deg);"></i>
+                    </button>
+                    <div id="simplicity-card" class="p-6 space-y-4 text-xs">
+                        {% if session.simplicity_check.bloat_warnings %}
+                        <div class="p-4 rounded-lg bg-brand-orange/5 border border-brand-orange/20 flex items-start gap-3">
+                            <i class="fa-solid fa-triangle-exclamation text-brand-orange mt-0.5"></i>
+                            <div>
+                                <h6 class="text-[10px] font-semibold text-brand-orange uppercase tracking-wider mb-1">Code Bloat Warnings</h6>
+                                <ul class="list-disc list-inside space-y-1 text-body pl-2 leading-relaxed">
+                                    {% for item in session.simplicity_check.bloat_warnings %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h5 class="text-[10px] font-semibold text-mute uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb text-brand-orange"></i> Simplification Strategy</h5>
+                            <p class="text-body pl-2 leading-relaxed">{{ session.simplicity_check.simplification_reasoning }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Surgical Changes (Git-style Diff) -->
+                <div class="border border-hairline-strong bg-surface-card rounded-xl overflow-hidden">
+                    <button class="w-full px-5 py-3.5 flex items-center justify-between bg-white/[0.02] border-b border-hairline text-left font-semibold text-[10px] text-ink uppercase tracking-wider hover:bg-white/[0.05] transition-all" onclick="toggleCard('diff-card')">
+                        <span class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-md border border-hairline bg-surface-elevated flex items-center justify-center text-[10px] text-mute font-mono">03</span>
+                            Surgical Changes (Git-style Diff)
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-mute text-[10px] transition-transform duration-300" id="diff-card-icon" style="transform: rotate(180deg);"></i>
+                    </button>
+                    <div id="diff-card" class="p-4">
+                        <div class="code-window-container">
+                            <div class="overflow-x-auto">
+                                <table class="w-full border-collapse" id="diff-table">
+                                    <thead>
+                                        <tr class="bg-white/[0.02] border-b border-hairline text-mute text-[10px] uppercase font-semibold font-mono">
+                                            <th class="py-2 px-3 text-right w-12 border-r border-hairline select-none">Old</th>
+                                            <th class="py-2 px-3 text-right w-12 border-r border-hairline select-none">New</th>
+                                            <th class="py-2 px-4 text-left">Code Changes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="diff-body">
+                                        <!-- Computed diff lines -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Goal-Driven Execution -->
+                <div class="border border-hairline-strong bg-surface-card rounded-xl overflow-hidden">
+                    <button class="w-full px-5 py-3.5 flex items-center justify-between bg-white/[0.02] border-b border-hairline text-left font-semibold text-[10px] text-ink uppercase tracking-wider hover:bg-white/[0.05] transition-all" onclick="toggleCard('goals-card')">
+                        <span class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-md border border-hairline bg-surface-elevated flex items-center justify-center text-[10px] text-mute font-mono">04</span>
+                            Goal-Driven Execution (Verifiable Goals)
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-mute text-[10px] transition-transform duration-300" id="goals-card-icon" style="transform: rotate(180deg);"></i>
+                    </button>
+                    <div id="goals-card" class="p-6">
+                        <div class="space-y-4">
+                            {% for item in session.verifiable_goals %}
+                            <div class="card-resend-elevated p-4 flex gap-3.5">
+                                <div class="w-5 h-5 rounded-full border border-brand-green/20 bg-brand-green/5 flex items-center justify-center text-brand-green mt-0.5 shrink-0 select-none">
+                                    <i class="fa-solid fa-check text-[9px]"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-[10px] font-semibold text-ink uppercase tracking-wider mb-1">{{ item.goal }}</h6>
+                                    <p class="text-xs text-charcoal leading-normal">{{ item.verification_method }}</p>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-xs text-mute text-center py-4">No specific validation goals provided.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleCard(cardId) {
+        const card = document.getElementById(cardId);
+        const icon = document.getElementById(cardId + '-icon');
+        
+        card.classList.toggle('hidden');
+        if (card.classList.contains('hidden')) {
+            icon.style.transform = 'rotate(0deg)';
+        } else {
+            icon.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    const oldCode = `{{ session.original_code|escapejs }}`;
+    const newCode = `{{ session.modified_code|escapejs }}`;
+
+    function renderDiff(oldText, newText) {
+        const oldLines = oldText.split('\n');
+        const newLines = newText.split('\n');
+        const tbody = document.getElementById('diff-body');
+        
+        let i = 0, j = 0;
+        while (i < oldLines.length || j < newLines.length) {
+            let row = document.createElement('tr');
+            row.className = 'border-b border-white/[0.02]';
+            
+            if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
+                row.innerHTML = `
+                    <td class="py-1 px-3 text-right text-stone border-r border-hairline select-none">${i+1}</td>
+                    <td class="py-1 px-3 text-right text-stone border-r border-hairline select-none">${j+1}</td>
+                    <td class="py-1 px-4 text-mute bg-transparent whitespace-pre font-mono">${escapeHtml(oldLines[i])}</td>
+                `;
+                i++;
+                j++;
+            } else if (j < newLines.length && (i >= oldLines.length || !oldLines.slice(i).includes(newLines[j]))) {
+                row.innerHTML = `
+                    <td class="py-1 px-3 text-right text-stone border-r border-hairline select-none"></td>
+                    <td class="py-1 px-3 text-right text-brand-green border-r border-hairline select-none bg-brand-green/5">${j+1}</td>
+                    <td class="py-1 px-4 diff-add whitespace-pre font-mono"><span class="text-brand-green select-none mr-2">+</span>${escapeHtml(newLines[j])}</td>
+                `;
+                j++;
+            } else {
+                row.innerHTML = `
+                    <td class="py-1 px-3 text-right text-brand-red border-r border-hairline select-none bg-brand-red/5">${i+1}</td>
+                    <td class="py-1 px-3 text-right text-stone border-r border-hairline select-none"></td>
+                    <td class="py-1 px-4 diff-remove whitespace-pre font-mono"><span class="text-brand-red select-none mr-2">-</span>${escapeHtml(oldLines[i])}</td>
+                `;
+                i++;
+            }
+            tbody.appendChild(row);
+        }
+    }
+
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Run diff on page load
+    renderDiff(oldCode, newCode);
+</script>
+{% endblock %}
